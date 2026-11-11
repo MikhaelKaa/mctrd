@@ -1,0 +1,69 @@
+name: mctrd CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Build
+      run: make
+
+    # дымовой тест: для каждого формата new -> add -> list -> pop и сравнение байтов.
+    # Имя файла в каталоге = имя + расширение исходного файла (регистр расширения сохраняется),
+    # поиск при pop - точное совпадение, поэтому pop по имени исходного файла.
+
+    - name: Smoke test (TRD)
+      working-directory: build
+      run: |
+        set -e
+        printf '0123456789' > data.bin
+        ./mctrd new demo.trd
+        ./mctrd add data.bin demo.trd
+        ./mctrd list demo.trd
+        ./mctrd pop data.bin demo.trd out.bin
+        cmp data.bin out.bin
+
+    - name: Smoke test (TRD, basic)
+      working-directory: build
+      run: |
+        set -e
+        printf '0123456789' > prog.b
+        ./mctrd new b.trd
+        ./mctrd -b -a 10 add prog.b b.trd
+        ./mctrd list b.trd
+        ./mctrd pop prog.B b.trd out.bin
+        cmp <(head -c 10 out.bin) prog.b
+
+    - name: Smoke test (SCL)
+      working-directory: build
+      run: |
+        set -e
+        printf '0123456789' > data.bin
+        ./mctrd new demo.scl
+        ./mctrd add data.bin demo.scl
+        ./mctrd list demo.scl
+        ./mctrd pop data.bin demo.scl out.bin
+        cmp data.bin out.bin
+
+    - name: Smoke test (TAP)
+      working-directory: build
+      run: |
+        set -e
+        printf '0123456789' > data.bin
+        ./mctrd new demo.tap
+        ./mctrd add data.bin demo.tap
+        ./mctrd list demo.tap
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: mctrd-linux
+        path: build/mctrd
